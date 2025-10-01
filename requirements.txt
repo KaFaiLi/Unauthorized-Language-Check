@@ -1,0 +1,15 @@
+pandas
+openpyxl
+pydub
+torch
+whisper_timestamped
+torchvision; platform_system == "Windows"
+
+# Notes:
+# - Installing `torch` via pip should follow the official instructions at https://pytorch.org
+#   to select the correct wheel for your CUDA / CPU setup. Example for CPU-only Windows:
+#     pip install torch --index-url https://download.pytorch.org/whl/cpu
+# - `whisper_timestamped` may require additional dependencies; if you hit errors, follow
+#   the package documentation or install via its GitHub repository.
+# - ffmpeg is required by pydub but is a system package (not a Python package). Install ffmpeg
+#   on Windows via a package manager (choco/scoop) or from https://ffmpeg.org and add it to PATH.
