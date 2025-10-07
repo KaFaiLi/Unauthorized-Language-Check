@@ -1,79 +1,225 @@
-# Unauthorized Language Check
+# 🎧 Audio Language & Confidence Flagging Tool
 
-A small Python script to transcribe audio files, detect language/confidence per-segment, flag suspicious segments (non-English/Hindi or low-confidence), export a consolidated Excel report, and optionally save cropped audio clips of flagged segments.
+This repository contains a Python script that performs **automated audio analysis, transcription, and quality flagging** using **Whisper** and **Voice Activity Detection (VAD)**.
 
-This repository contains a single script, `main.py`, which walks a folder of audio files, transcribes them using a Whisper-based wrapper, and writes the results to an Excel file (and cropped WAVs for flagged segments).
+It is designed to:
 
-## What this script does
-- Loads a Whisper model (via `whisper_timestamped`) and transcribes each audio file in a folder.
-- For each segment, records: start/end times, transcription text, detected language, confidence score.
-- Flags segments when the detected language is not English (`en`) or Hindi (`hi`), or when the confidence score is below a threshold.
-- Saves all segment metadata to an Excel spreadsheet.
-- Optionally crops and saves flagged audio segments as WAV files (requires `ffmpeg` for `pydub`).
+* Detect **speech segments** automatically using waveform analysis (VAD).
+* Transcribe each speech segment using **Whisper**.
+* Identify **non-English or non-Hindi segments** and flag them.
+* Flag segments with **low transcription confidence**.
+* Optionally **merge contiguous flagged segments** and save them as cropped audio clips.
+* Export a complete report to **Excel** for review and QA purposes.
 
-## Quick start
+---
 
-1. Make a Python virtual environment and activate it (Windows PowerShell):
+## 🧠 Features
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+✅ **Automatic Speech Segmentation**
+Detects and splits audio based on silent intervals using `pydub`’s VAD.
+
+✅ **Whisper Transcription**
+Transcribes each segment using the `whisper_timestamped` library with multilingual support.
+
+✅ **Language & Confidence Flagging**
+Flags:
+
+* Non-English or non-Hindi speech
+* Segments with low model confidence
+
+✅ **Segment Merging**
+Merges adjacent flagged segments within a configurable time gap (e.g., ≤ 1000 ms).
+
+✅ **Audio Cropping & Export**
+Saves flagged or merged audio clips for manual verification.
+
+✅ **Comprehensive Logging**
+Logs processing progress, warnings, and errors both in console and to a timestamped file.
+
+✅ **Excel Report Generation**
+Generates a clean, structured Excel file with:
+
+* Audio filename
+* Start & end times
+* Transcription
+* Detected language
+* Confidence score
+* Flag reason
+
+---
+
+## 📦 Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/audio-flagging-tool.git
+cd audio-flagging-tool
 ```
 
-2. Install Python dependencies:
+### 2. Create a Virtual Environment
 
-```powershell
+```bash
+python -m venv venv
+source venv/bin/activate  # (Linux/Mac)
+venv\Scripts\activate     # (Windows)
+```
+
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
-# Note: installing the appropriate `torch` wheel is best done following https://pytorch.org for your CUDA / OS setup.
 ```
 
-3. Install ffmpeg on your system and ensure it's on PATH. `pydub` uses ffmpeg to read most audio formats.
+If you don’t have a `requirements.txt` yet, you can create one with:
 
-4. Update paths in `main.py` before running:
+```bash
+pip install pandas torch tqdm openpyxl numpy pydub whisper_timestamped
+```
 
-- `INPUT_AUDIO_FOLDER` — folder containing your audio files (mp3, wav, m4a, flac, ogg)
-- `OUTPUT_EXCEL_FILE` — path to save the Excel report (e.g. `output.xlsx`)
-- `OUTPUT_CROPPED_FOLDER` — folder to save cropped flagged clips (optional)
+> 💡 You must also have **ffmpeg** installed for `pydub` to handle audio files.
+> On Windows: [Download here](https://ffmpeg.org/download.html)
+> On macOS (Homebrew): `brew install ffmpeg`
+> On Ubuntu: `sudo apt install ffmpeg`
 
-Also optionally adjust `CONFIDENCE_THRESHOLD` and the Whisper model size used in the script (currently `base`).
+---
 
-5. Run the script:
+## ⚙️ Configuration
 
-```powershell
+You can modify the following variables in the `__main__` section of `main.py`:
+
+| Parameter                | Description                         | Default           |
+| ------------------------ | ----------------------------------- | ----------------- |
+| `INPUT_AUDIO_FOLDER`     | Folder containing input audio files | `"sample_data"`   |
+| `OUTPUT_EXCEL_FILE`      | Path to save Excel results          | `"output.xlsx"`   |
+| `OUTPUT_CROPPED_FOLDER`  | Folder to save cropped audio clips  | `"cropped_audio"` |
+| `CONFIDENCE_THRESHOLD`   | Minimum confidence required         | `0.7`             |
+| `MIN_SILENCE_LEN`        | Silence length (ms) for VAD         | `500`             |
+| `SILENCE_THRESH`         | Silence threshold (dBFS)            | `-40`             |
+| `MIN_SEGMENT_LEN`        | Minimum segment duration (ms)       | `1000`            |
+| `ENABLE_LOGGING`         | Save logs to file                   | `True`            |
+| `LOG_FOLDER`             | Folder for log files                | `"logs"`          |
+| `MERGE_FLAGGED_SEGMENTS` | Merge nearby flagged segments       | `True`            |
+| `MAX_MERGE_GAP_MS`       | Max gap (ms) for merging            | `1000`            |
+
+---
+
+## 🧩 How It Works
+
+### 1. **Speech Detection (VAD)**
+
+The script analyzes the waveform and splits the audio into speech segments using:
+
+```python
+detect_nonsilent(audio, min_silence_len, silence_thresh)
+```
+
+### 2. **Whisper Transcription**
+
+Each segment is transcribed using:
+
+```python
+result = whisper.transcribe(model, audio_array)
+```
+
+The detected language and per-segment confidence are extracted.
+
+### 3. **Flagging Logic**
+
+A segment is **flagged** if:
+
+* The detected language is **not English (`en`)** or **Hindi (`hi`)**, OR
+* The confidence score is below `CONFIDENCE_THRESHOLD`.
+
+### 4. **Merging Flagged Segments**
+
+Flagged segments close together (≤ `MAX_MERGE_GAP_MS`) are merged and exported.
+
+### 5. **Report Generation**
+
+All processed data are stored in an Excel file with detailed per-segment metadata.
+
+---
+
+## 🧪 Example Output
+
+### **Excel Columns**
+
+| Audio Filename | Start Time (s) | End Time (s) | Transcription            | Detected Language | Confidence Score | Is Flagged | Flag Reason                      |
+| -------------- | -------------- | ------------ | ------------------------ | ----------------- | ---------------- | ---------- | -------------------------------- |
+| sample1.wav    | 0.0            | 8.3          | “Hello everyone…”        | en                | 0.92             | False      | N/A                              |
+| sample1.wav    | 8.3            | 13.5         | “नमस्ते दोस्तों…”        | hi                | 0.88             | False      | N/A                              |
+| sample1.wav    | 13.5           | 20.1         | “Bonjour tout le monde…” | fr                | 0.76             | ✅          | Language mismatch (Detected: fr) |
+
+---
+
+## 🚀 Run the Script
+
+Once configured, simply run:
+
+```bash
 python main.py
 ```
 
-## Output
-
-- An Excel file containing one row per segment with these columns:
-  - Audio Filename
-  - Start Time (s)
-  - End Time (s)
-  - Is Flagged
-  - Flag Reason
-  - Transcription
-  - Detected Language
-  - Confidence Score
-- If `OUTPUT_CROPPED_FOLDER` is set, WAV files for flagged segments will be written there.
-
-## Dependencies / Requirements
-- Python 3.8+
-- See `requirements.txt` for the Python packages used by the script.
-- ffmpeg (system package) required by `pydub` to read and write many audio formats.
-- GPU acceleration: if you have CUDA and a compatible `torch` wheel, the script will prefer CUDA. Otherwise it falls back to CPU.
-
-## Notes & troubleshooting
-- If `pydub` raises a `CouldntDecodeError` the file could be corrupt or `ffmpeg` is missing from your PATH.
-- If the Whisper model fails to load, ensure `whisper_timestamped` is installed and that `torch` is installed correctly for your platform.
-- Model size: `main.py` currently calls `whisper.load_model("base")`. For faster/fewer-resources runs choose `tiny` or `small`; for better quality use `large` (requires more RAM and GPU memory).
-- Excel writing uses `openpyxl` as the pandas engine.
-
-## Customization
-- Change the list of accepted languages in `main.py` (currently accepts `en` and `hi`).
-- Adjust `CONFIDENCE_THRESHOLD` to be more/less strict.
-
-## License
-Proprietary to the author (no license file provided). Use and modify as needed.
+The progress will be displayed in your terminal and logs saved in `/logs`.
 
 ---
-Generated README based on `main.py`.
+
+## 📁 Output Structure
+
+```
+project/
+│
+├── sample_data/               # Input audio files
+├── cropped_audio/             # Flagged/merged audio exports
+├── logs/
+│   └── audio_processing_YYYYMMDD_HHMMSS.log
+│
+├── output.xlsx                # Transcription & flag report
+└── main.py
+```
+
+---
+
+## 🧰 Logging Example
+
+Console and file logs include:
+
+```
+Using device: cuda
+Whisper model loaded successfully.
+Processing: sample_audio.wav
+  Detected 5 speech segment(s)
+  Merging contiguous flagged segments...
+  Saved merged clip: sample_audio_merged_1_12000ms_to_19000ms.wav
+✅ Successfully saved all segments to 'output.xlsx'
+```
+
+---
+
+## 🧱 Dependencies
+
+| Library               | Purpose                  |
+| --------------------- | ------------------------ |
+| `pandas`              | Excel export             |
+| `torch`               | Whisper backend          |
+| `whisper_timestamped` | Transcription engine     |
+| `pydub`               | Audio segmentation (VAD) |
+| `tqdm`                | Progress bars            |
+| `numpy`               | Confidence averaging     |
+| `openpyxl`            | Excel output             |
+| `logging`             | File + console logging   |
+
+---
+
+## 💡 Tips
+
+* For long audios, consider adjusting `min_silence_len` and `silence_thresh` for better segmentation.
+* GPU (`cuda`) support will speed up Whisper significantly.
+* You can expand supported languages by editing the flag condition:
+
+  ```python
+  if language not in ["en", "hi"]:
+      ...
+  ```
+
