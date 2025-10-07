@@ -183,7 +183,7 @@ def process_and_flag_audios(input_folder, output_excel_path, output_cropped_fold
     logger.info(f"Using device: {device}")
 
     try:
-        model = whisper.load_model("base", device=device)
+        model = whisper.load_model("large-v3-turbo", device=device)
         logger.info("Whisper model loaded successfully.")
     except Exception as e:
         logger.error(f"Error loading Whisper model: {e}")
