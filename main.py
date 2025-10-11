@@ -145,7 +145,9 @@ def process_and_flag_audios(input_folder, output_excel_path, output_cropped_fold
                             confidence_threshold=0.7, min_silence_len=500, 
                             silence_thresh=-40, min_segment_len=1000,
                             enable_logging=True, log_folder="logs",
-                            merge_flagged_segments=True, max_merge_gap_ms=1000):
+                            merge_flagged_segments=True, max_merge_gap_ms=1000,
+                            authorized_languages=None, whisper_model_path=None,
+                            model_size="large-v3-turbo"):
     """
     Processes audio files by:
     1. Using VAD to detect speech segments based on sound wave
@@ -166,13 +168,28 @@ def process_and_flag_audios(input_folder, output_excel_path, output_cropped_fold
         log_folder (str): Folder to save log files
         merge_flagged_segments (bool): Merge contiguous flagged segments
         max_merge_gap_ms (int): Maximum gap to consider segments contiguous
+        authorized_languages (list): List of authorized language codes (e.g., ['en', 'hi'])
+        whisper_model_path (str): Custom path to Whisper model (optional)
+        model_size (str): Whisper model size to use
+    
+    Returns:
+        dict: Processing statistics and output paths
     """
+    # Set default authorized languages if not provided
+    if authorized_languages is None:
+        authorized_languages = ["en", "hi"]
+    
     # --- 1. Setup ---
     logger = setup_logging(log_to_file=enable_logging, log_folder=log_folder)
     
     if not os.path.isdir(input_folder):
         logger.error(f"The folder '{input_folder}' does not exist.")
-        return
+        return {
+            'success': False,
+            'error': f"The folder '{input_folder}' does not exist.",
+            'output_excel_path': None,
+            'output_cropped_folder': None
+        }
 
     if output_cropped_folder:
         if not os.path.isdir(output_cropped_folder):
@@ -183,17 +200,32 @@ def process_and_flag_audios(input_folder, output_excel_path, output_cropped_fold
     logger.info(f"Using device: {device}")
 
     try:
-        model = whisper.load_model("large-v3-turbo", device=device)
-        logger.info("Whisper model loaded successfully.")
+        # Load model with custom path if provided
+        if whisper_model_path:
+            model = whisper.load_model(model_size, device=device, download_root=whisper_model_path)
+            logger.info(f"Whisper model '{model_size}' loaded from custom path: {whisper_model_path}")
+        else:
+            model = whisper.load_model(model_size, device=device)
+            logger.info(f"Whisper model '{model_size}' loaded successfully.")
     except Exception as e:
         logger.error(f"Error loading Whisper model: {e}")
-        return
+        return {
+            'success': False,
+            'error': str(e),
+            'output_excel_path': None,
+            'output_cropped_folder': None
+        }
 
     audio_files = [f for f in os.listdir(input_folder) 
                    if f.lower().endswith(('.mp3', '.wav', '.m4a', '.flac', '.ogg'))]
     if not audio_files:
         logger.warning(f"No audio files found in '{input_folder}'.")
-        return
+        return {
+            'success': False,
+            'error': f"No audio files found in '{input_folder}'.",
+            'output_excel_path': None,
+            'output_cropped_folder': None
+        }
 
     logger.info(f"Found {len(audio_files)} audio file(s) to process.")
     logger.info("=" * 70)
@@ -288,7 +320,7 @@ def process_and_flag_audios(input_folder, output_excel_path, output_cropped_fold
                     is_flagged = False
                     flag_reason = ""
                     
-                    if language not in ["en", "hi"]:
+                    if language not in authorized_languages:
                         is_flagged = True
                         flag_reason = f"Language mismatch (Detected: {language})"
                     elif confidence < confidence_threshold:
@@ -400,7 +432,12 @@ def process_and_flag_audios(input_folder, output_excel_path, output_cropped_fold
     # --- 5. Save Excel Output ---
     if not all_segments_data:
         logger.warning("No segments were processed from any audio files.")
-        return
+        return {
+            'success': False,
+            'error': "No segments were processed from any audio files.",
+            'output_excel_path': None,
+            'output_cropped_folder': None
+        }
 
     df = pd.DataFrame(all_segments_data)
     df = df[["Audio Filename", "Start Time (s)", "End Time (s)", "Is Flagged", 
@@ -426,6 +463,17 @@ def process_and_flag_audios(input_folder, output_excel_path, output_cropped_fold
     if merge_flagged_segments:
         logger.info(f"Merged flagged clips saved: {processing_stats['merged_clips']}")
     logger.info("=" * 70)
+
+    # Return processing results
+    return {
+        'success': True,
+        'output_excel_path': output_excel_path,
+        'output_cropped_folder': output_cropped_folder,
+        'stats': processing_stats,
+        'device': device,
+        'model_size': model_size,
+        'authorized_languages': authorized_languages
+    }
 
 if __name__ == '__main__':
     # --- Configuration ---

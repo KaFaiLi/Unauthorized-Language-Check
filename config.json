@@ -1,0 +1,20 @@
+{
+    "whisper_model_path": "",
+    "model_size": "large-v3-turbo",
+    "ffmpeg_path": "",
+    "authorized_languages": [
+        "en",
+        "hi"
+    ],
+    "input_folder": "sample_data",
+    "confidence_threshold": 0.7,
+    "min_silence_len": 500,
+    "silence_thresh": -40,
+    "min_segment_len": 1000,
+    "merge_flagged_segments": true,
+    "max_merge_gap_ms": 1000,
+    "enable_logging": true,
+    "log_folder": "logs",
+    "output_excel_path": "output.xlsx",
+    "output_cropped_folder": "cropped_audio"
+}

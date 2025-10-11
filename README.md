@@ -1,12 +1,22 @@
 # 🎧 Audio Language & Confidence Flagging Tool
 
-This repository contains a Python script that performs **automated audio analysis, transcription, and quality flagging** using **Whisper** and **Voice Activity Detection (VAD)**.
+This repository contains a **Streamlit web application** and Python backend for **automated audio analysis, transcription, and quality flagging** using **Whisper** and **Voice Activity Detection (VAD)**.
+
+## 🆕 New: Web Interface Available!
+
+Now includes a **beautiful Streamlit web interface** for easy configuration and processing!
+
+```bash
+streamlit run app.py
+```
+
+---
 
 It is designed to:
 
 * Detect **speech segments** automatically using waveform analysis (VAD).
 * Transcribe each speech segment using **Whisper**.
-* Identify **non-English or non-Hindi segments** and flag them.
+* Identify **unauthorized language segments** and flag them.
 * Flag segments with **low transcription confidence**.
 * Optionally **merge contiguous flagged segments** and save them as cropped audio clips.
 * Export a complete report to **Excel** for review and QA purposes.
@@ -15,16 +25,25 @@ It is designed to:
 
 ## 🧠 Features
 
+✅ **🖥️ Streamlit Web Interface**
+Beautiful, interactive web app for configuration and processing.
+
+✅ **🎬 FFmpeg Path Configuration**
+Configure custom FFmpeg path with built-in validation and testing.
+
 ✅ **Automatic Speech Segmentation**
-Detects and splits audio based on silent intervals using `pydub`’s VAD.
+Detects and splits audio based on silent intervals using `pydub`'s VAD.
 
 ✅ **Whisper Transcription**
 Transcribes each segment using the `whisper_timestamped` library with multilingual support.
 
+✅ **Configurable Language Compliance**
+Flag segments based on customizable authorized language list.
+
 ✅ **Language & Confidence Flagging**
 Flags:
 
-* Non-English or non-Hindi speech
+* Non-authorized language speech
 * Segments with low model confidence
 
 ✅ **Segment Merging**
@@ -71,11 +90,17 @@ venv\Scripts\activate     # (Windows)
 pip install -r requirements.txt
 ```
 
-If you don’t have a `requirements.txt` yet, you can create one with:
+### 4. Run Setup Script
 
 ```bash
-pip install pandas torch tqdm openpyxl numpy pydub whisper_timestamped
+python setup.py
 ```
+
+This will:
+- Create necessary directories
+- Check dependencies
+- Verify FFmpeg installation
+- Create sample configuration
 
 > 💡 You must also have **ffmpeg** installed for `pydub` to handle audio files.
 > On Windows: [Download here](https://ffmpeg.org/download.html)
@@ -84,7 +109,49 @@ pip install pandas torch tqdm openpyxl numpy pydub whisper_timestamped
 
 ---
 
+## 🚀 Quick Start
+
+### Option 1: Web Interface (Recommended)
+
+```bash
+streamlit run app.py
+```
+
+Then open your browser to `http://localhost:8501`
+
+**See:** `QUICKSTART.md` for detailed guide
+
+### Option 2: Command Line
+
+```bash
+python main.py
+```
+
+Edit configuration in the `__main__` section of `main.py`
+
+---
+
+## 📚 Documentation
+
+- **`QUICKSTART.md`** - Get started in 5 minutes
+- **`README_STREAMLIT.md`** - Complete Streamlit app documentation
+- **`README.md`** - This file (overview and CLI usage)
+
+---
+
 ## ⚙️ Configuration
+
+### Web Interface
+
+Configure all settings through the Streamlit UI:
+- Model selection and path
+- Authorized languages (multi-select)
+- Processing parameters
+- Output paths
+
+Settings are saved to `config.json` automatically.
+
+### Command Line
 
 You can modify the following variables in the `__main__` section of `main.py`:
 
@@ -98,9 +165,8 @@ You can modify the following variables in the `__main__` section of `main.py`:
 | `SILENCE_THRESH`         | Silence threshold (dBFS)            | `-40`             |
 | `MIN_SEGMENT_LEN`        | Minimum segment duration (ms)       | `1000`            |
 | `ENABLE_LOGGING`         | Save logs to file                   | `True`            |
-| `LOG_FOLDER`             | Folder for log files                | `"logs"`          |
-| `MERGE_FLAGGED_SEGMENTS` | Merge nearby flagged segments       | `True`            |
-| `MAX_MERGE_GAP_MS`       | Max gap (ms) for merging            | `1000`            |
+| `MERGE_FLAGGED_SEGMENTS` | Merge consecutive flagged segments  | `True`            |
+| `MAX_MERGE_GAP_MS`       | Maximum gap to merge segments (ms)  | `1000`            |
 
 ---
 

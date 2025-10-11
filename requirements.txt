@@ -17,3 +17,6 @@ coloredlogs>=15.0.1
 
 # Optional (recommended for stable audio handling)
 soundfile>=0.12.1
+
+# Streamlit web interface
+streamlit>=1.28.0
